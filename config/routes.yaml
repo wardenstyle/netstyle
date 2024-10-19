@@ -5,3 +5,23 @@ index:
 app_home:
     path: /home
     controller: App\Controller\HomeController::home
+
+# Route pour récupérer la liste de tous les films
+movies_list:
+    path: /movies
+    controller: App\Controller\MovieController::getMovies
+    methods: GET
+
+# Route pour récupérer un film spécifique avec un ID
+movies_show:
+    path: /movies/{id}
+    controller: App\Controller\MovieController::getMovie
+    methods: GET
+    requirements:
+        id: \d+  # Assure que l'ID est un entier
+
+# Route pour créer un nouveau film
+movies_create:
+    path: /movies
+    controller: App\Controller\MovieController::createMovie
+    methods: POST

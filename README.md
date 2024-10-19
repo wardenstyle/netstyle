@@ -7,3 +7,5 @@ back-end : symfony (5.1)
 => MySQl ()
 => Apache (2.4)
 Server Streaming: NGINX (version à définir)
+
+19.10.24: installation de doctrine (orm) et création des entités
