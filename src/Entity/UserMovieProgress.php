@@ -1,77 +1,79 @@
 <?php 
 
-// src/Entity/UserMovieProgress.php
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity]
-#[ORM\Table(name: 'user_movie_progress')]
+/**
+ * Cette entité représente le statut d'avancement d'un utilisateur pour un film particulier 
+ * (par exemple, où l'utilisateur a arrêté de regarder le film)
+ * 
+ * @ORM\Entity()
+ */
 class UserMovieProgress
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column(type: 'integer')]
+    /**
+     * @ORM\Id
+     * @ORM\GeneratedValue
+     * @ORM\Column(type="integer")
+     */
     private $id;
 
-    #[ORM\ManyToOne(targetEntity: User::class)]
+    /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\User", inversedBy="movieProgresses")
+     * @ORM\JoinColumn(nullable=false)
+     */
     private $user;
 
-    #[ORM\ManyToOne(targetEntity: Movie::class)]
+    /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\Movie", inversedBy="userProgresses")
+     * @ORM\JoinColumn(nullable=false)
+     */
     private $movie;
 
-    #[ORM\Column(type: 'integer')]
-    private $currentPosition; // En secondes
-
-    #[ORM\Column(type: 'datetime')]
-    private $updatedAt;
+    /**
+     * @ORM\Column(type="integer")
+     */
+    private $progress; // représente par exemple le temps en secondes où l'utilisateur s'est arrêté
 
     public function getId(): ?int
     {
-        return $id;
+        return $this->id;
     }
 
     public function getUser(): ?User
     {
-        return $user;
+        return $this->user;
     }
 
-    public function setUser(User $user): self
+    public function setUser(?User $user): self
     {
         $this->user = $user;
+
         return $this;
     }
 
     public function getMovie(): ?Movie
     {
-        return $movie;
+        return $this->movie;
     }
 
-    public function setMovie(Movie $movie): self
+    public function setMovie(?Movie $movie): self
     {
         $this->movie = $movie;
+
         return $this;
     }
 
-    public function getCurrentPosition(): ?int
+    public function getProgress(): ?int
     {
-        return $currentPosition;
+        return $this->progress;
     }
 
-    public function setCurrentPosition(int $currentPosition): self
+    public function setProgress(int $progress): self
     {
-        $this->currentPosition = $currentPosition;
-        return $this;
-    }
+        $this->progress = $progress;
 
-    public function getUpdatedAt(): ?\DateTimeInterface
-    {
-        return $updatedAt;
-    }
-
-    public function setUpdatedAt(\DateTimeInterface $updatedAt): self
-    {
-        $this->updatedAt = $updatedAt;
         return $this;
     }
 }

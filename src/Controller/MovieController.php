@@ -8,17 +8,34 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class MovieController extends AbstractController
 {
-    #[Route('/movies', name: 'get_movies', methods: ['GET'])]
+    /**
+     * @Route("/movies", name="movie_list", methods={"GET"})
+     */
     public function getMovies(EntityManagerInterface $entityManager): JsonResponse
     {
         $movies = $entityManager->getRepository(Movie::class)->findAll();
-        return $this->json($movies);
+        // Transformer les entités Movie en tableau associatif
+        $data = [];
+        foreach ($movies as $movie) {
+            $data[] = [
+                'id' => $movie->getId(),
+                'title' => $movie->getTitle(),
+                'description' => $movie->getDescription(),
+                'genre' => $movie->getGenre(),
+                'duration' => $movie->getDuration(),
+            ];
+        }
+
+        return new JsonResponse($data);
     }
 
-    #[Route('/movies/{id}', name: 'get_movie', methods: ['GET'])]
+    /**
+     * @Route("/movies/{id}", name="movie_show", methods={"GET"})
+     */
     public function getMovie(int $id, EntityManagerInterface $entityManager): JsonResponse
     {
         $movie = $entityManager->getRepository(Movie::class)->find($id);
@@ -27,38 +44,40 @@ class MovieController extends AbstractController
             return $this->json(['error' => 'Movie not found'], 404);
         }
 
-        return $this->json($movie);
+        return new JsonResponse([
+            'id' => $movie->getId(),
+            'title' => $movie->getTitle(),
+            'description' => $movie->getDescription(),
+            'genre' => $movie->getGenre(),
+            'duration' => $movie->getDuration(),
+        ]);
     }
 
-    //#[Route('/movies', name: 'movies_create', methods: ['POST'])]
-    //public function createMovie(Request $request, EntityManagerInterface $entityManager): JsonResponse
-    public function createMovie(Request $request): Response
+    /**
+     * @Route("/movies", name="movie_create", methods={"POST"})
+     */
+    public function create(Request $request, EntityManagerInterface $entityManager, ValidatorInterface $validator)
     {
+        // Récupérer les données JSON de la requête
         $data = json_decode($request->getContent(), true);
 
-        if (empty($data['title'])) {
-            return $this->json(['error' => 'Title is required'], Response::HTTP_BAD_REQUEST);
+        // Créer une nouvelle instance de Movie
+        $movie = new Movie();
+        $movie->setTitle($data['title']);
+        $movie->setDescription($data['description'] ?? null);
+        $movie->setGenre($data['genre']);
+        $movie->setDuration($data['duration']);
+
+        // Validation
+        $errors = $validator->validate($movie);
+        if (count($errors) > 0) {
+            return new JsonResponse((string) $errors, JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        $newMovie = [
-            'id' => rand(100, 999), // Génération d'un ID fictif
-            'title' => $data['title'],
-        ];
+        // Enregistrer l'entité Movie dans la base de données
+        $entityManager->persist($movie);
+        $entityManager->flush();
 
-        // Retourne une réponse JSON avec le film créé
-        return $this->json($newMovie, Response::HTTP_CREATED);
-
-        // $movie = new Movie();
-        // $movie->setTitle($data['title']);
-        // $movie->setDescription($data['description']);
-        // $movie->setFilePath($data['filePath']);
-        // $movie->setReleaseDate(new \DateTime($data['releaseDate']));
-        // $movie->setGenre($data['genre']);
-        // $movie->setDuration($data['duration']);
-
-        // $entityManager->persist($movie);
-        // $entityManager->flush();
-
-        // return $this->json($movie);
+        return new JsonResponse(['id' => $movie->getId()], JsonResponse::HTTP_CREATED);
     }
 }

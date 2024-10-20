@@ -5,82 +5,103 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
 
-#[ORM\Entity]
-#[ORM\Table(name: 'users')]
+/**
+ * @ORM\Entity()
+ */
 class User implements UserInterface
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column(type: 'integer')]
+    /**
+     * @ORM\Id
+     * @ORM\GeneratedValue
+     * @ORM\Column(type="integer")
+     */
     private $id;
 
-    #[ORM\Column(type: 'string', length: 255, unique: true)]
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
     private $email;
 
-    #[ORM\Column(type: 'string', length: 255)]
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
     private $password;
 
-    #[ORM\Column(type: 'string', length: 255)]
-    private $role;
+     /**
+     * @ORM\Column(type="json", length=255)
+     */
+    private $roles = [];
 
-    #[ORM\Column(type: 'datetime')]
-    private $createdAt;
+    /**
+    * @ORM\OneToMany(targetEntity="App\Entity\UserMovieProgress", mappedBy="user", cascade={"persist", "remove"})
+    */
+    private $movieProgresses;
 
     public function getId(): ?int
     {
-        return $id;
+        return $this->id;
     }
 
     public function getEmail(): ?string
     {
-        return $email;
+        return $this->email;
     }
 
     public function setEmail(string $email): self
     {
         $this->email = $email;
+
         return $this;
     }
 
     public function getPassword(): ?string
     {
-        return $password;
+        return $this->password;
     }
 
     public function setPassword(string $password): self
     {
         $this->password = $password;
+
         return $this;
     }
 
-    public function getRole(): ?string
-    {
-        return $role;
-    }
-
-    public function setRole(string $role): self
-    {
-        $this->role = $role;
-        return $this;
-    }
-
-    public function getCreatedAt(): ?\DateTimeInterface
-    {
-        return $createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeInterface $createdAt): self
-    {
-        $this->createdAt = $createdAt;
-        return $this;
-    }
-
-    // Méthodes nécessaires pour l'implémentation de UserInterface
     public function getRoles(): array
     {
-        return [$this->role];
+        // assure qu'au moins 'ROLE_USER' soit attribué
+        $roles = $this->roles;
+        if (empty($roles)) {
+            $roles[] = 'ROLE_USER';
+        }
+
+        return array_unique($roles);
+    }
+
+    public function setRoles(array $roles): self
+    {
+        $this->roles = $roles;
+
+        return $this;
+    }
+
+    public function getMovieProgresses()
+    {
+        return $this->movieProgresses;
+    }
+
+    public function addMovieProgress(UserMovieProgress $progress): self
+    {
+        $this->movieProgresses[] = $progress;
+
+        return $this;
     }
 
     public function getSalt() {}
+
     public function eraseCredentials() {}
+
+    public function getUsername(): string
+    {
+        return $this->email;
+    }
 }
