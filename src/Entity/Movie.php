@@ -45,6 +45,18 @@ class Movie
      */
     private $userProgresses;
 
+    // Méthode pour convertir l'entité Movie en tableau associatif
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'title' => $this->getTitle(),
+            'description' => $this->getDescription(),
+            'genre' => $this->getGenre(),
+            'duration' => $this->getDuration(),
+        ];
+    }
+
     public function getId(): ?int
     {
         return $this->id;

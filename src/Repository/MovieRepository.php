@@ -19,4 +19,14 @@ class MovieRepository extends ServiceEntityRepository
         parent::__construct($registry, Movie::class);
     }
 
+    // Méthode pour rechercher un film par son titre
+    public function findByTitle(string $title):array
+    {
+        return $this->createQueryBuilder('m')
+            ->where('m.title LIKE :title')
+            ->setParameter('title', '%' . $title . '%')
+            ->getQuery()
+            ->getResult();
+    }
+
 }

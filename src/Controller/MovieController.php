@@ -3,6 +3,8 @@
 namespace App\Controller;
 
 use App\Entity\Movie;
+use App\Repository\MovieRepository;
+use App\Service\MovieTransformer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -12,6 +14,13 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class MovieController extends AbstractController
 {
+    private $movieTransformer;
+
+    public function __construct(MovieTransformer $movieTransformer)
+    {
+        $this->movieTransformer = $movieTransformer;
+    }
+
     /**
      * @Route("/movies", name="movie_list", methods={"GET"})
      */
@@ -29,6 +38,7 @@ class MovieController extends AbstractController
                 'duration' => $movie->getDuration(),
             ];
         }
+        // ou on peut faire comme ça:  $data = array_map(fn(Movie $movie) => $movie->toArray(), $movies);
 
         return new JsonResponse($data);
     }
@@ -44,13 +54,7 @@ class MovieController extends AbstractController
             return $this->json(['error' => 'Movie not found'], 404);
         }
 
-        return new JsonResponse([
-            'id' => $movie->getId(),
-            'title' => $movie->getTitle(),
-            'description' => $movie->getDescription(),
-            'genre' => $movie->getGenre(),
-            'duration' => $movie->getDuration(),
-        ]);
+        return new JsonResponse($movie->toArray());
     }
 
     /**
@@ -79,5 +83,32 @@ class MovieController extends AbstractController
         $entityManager->flush();
 
         return new JsonResponse(['id' => $movie->getId()], JsonResponse::HTTP_CREATED);
+    }
+
+    /**
+     * @Route("/search", name="movies_search", methods={"GET"})
+     */
+    public function searchByTitle(Request $request, MovieRepository $movieRepository): JsonResponse
+    {
+        // Récupérer le paramètre de titre depuis l'URL
+        $title = $request->query->get('title');
+
+        // Si le paramètre est manquant
+        if (!$title) {
+            return new JsonResponse(['message' => 'Title parameter is missing'], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        // Appeler la méthode de recherche dans le repository
+        $movies = $movieRepository->findByTitle($title);
+
+        // Vérifier si des films ont été trouvés
+        if (!$movies) {
+            return new JsonResponse(['message' => 'No movies found'], JsonResponse::HTTP_NOT_FOUND);
+        }
+        // Transformer les entités Movie en tableau associatif
+        $data = array_map(fn(Movie $movie) => $movie->toArray(), $movies);
+        // ou en utilisant le service : $data = $this->movieTransformer->transformCollection($movies);
+
+        return new JsonResponse($data);
     }
 }

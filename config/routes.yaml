@@ -25,3 +25,9 @@ movies_create:
     path: /movies
     controller: App\Controller\MovieController::createMovie
     methods: POST
+
+# Route pour rechercher un film
+movies_search:
+    path: /search
+    controller: App\Controller\MovieController::searchByTitle
+    methods: GET
