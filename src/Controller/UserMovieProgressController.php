@@ -2,11 +2,13 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
+use App\Repository\UserRepository;
 use App\Entity\Movie;
 use App\Repository\MovieRepository;
 use App\Entity\UserMovieProgress;
 use App\Repository\UserMovieProgressRepository;
-use App\Service\MovieTransformer;
+use App\Service\MovieProgressTransformer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -16,72 +18,65 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class UserMovieProgressController extends AbstractController
 {
-    private $movieTransformer;
+    private $movieProgressTransformer;
 
-    public function __construct(MovieTransformer $movieTransformer)
+    public function __construct(MovieProgressTransformer $movieProgressTransformer)
     {
-        //services
-        $this->movieTransformer = $movieTransformer;
+        $this->movieProgressTransformer = $movieProgressTransformer;
     }
 
     /**
      * sauvegarder la progression de l'utilisateur
-     * @Route("/movies/{id}/progress", name="save_movie_progress", methods={"POST"})
+     * @Route("/user/{userId}/movie/{movieId}/progress/save", name="save_movie_progress", methods={"POST"})
      */
-    public function saveMovieProgress(int $id, Request $request, MovieRepository $movieRepository, 
-    UserMovieProgressRepository $progressRepository): Response
-    {
-        // Récupérer le film
-        $movie = $movieRepository->find($id);
-        if (!$movie) {
-            return new Response("Movie not found", 404);
-        }
+    public function saveMovieProgress(
+        int $userId,
+        int $movieId,
+        Request $request,
+        EntityManagerInterface $em,
+        UserMovieProgressRepository $progressRepository,
+        MovieProgressTransformer $movieProgressTransformer // Injection du service
+    ): JsonResponse {
+        // Récupérer la progression depuis les paramètres GET (URL) au lieu du corps de la requête
+        $newProgress = $request->query->get('progress', 0); // Valeur par défaut : 0
 
-        // Récupérer l'utilisateur (ici on suppose que l'utilisateur est authentifié, il faudra le récupérer)
-        $user = $this->getUser(); // Utilisation de l'utilisateur connecté
-
-        if (!$user) {
-            return new Response("User not authenticated", 401);
-        }
-
-        // Récupérer le progrès à partir de la requête (par exemple en JSON)
-        $data = json_decode($request->getContent(), true);
-        $progress = $data['progress'] ?? null;
-
-        if (!$progress || !is_int($progress)) {
-            return new Response("Invalid progress value", 400);
-        }
-
-        // Vérifier si un enregistrement existe déjà pour cet utilisateur et ce film
-        $userMovieProgress = $progressRepository->findOneBy(['user' => $user, 'movie' => $movie]);
-
-        if (!$userMovieProgress) {
-            // Si non, créer un nouvel enregistrement
-            $userMovieProgress = new UserMovieProgress();
-            $userMovieProgress->setUser($user);
-            $userMovieProgress->setMovie($movie);
-        }
-
-        // Mettre à jour le progrès
-        $userMovieProgress->setProgress($progress);
-
-        // Enregistrer dans la base de données
-        $em = $this->getDoctrine()->getManager();
-        $em->persist($userMovieProgress);
-        $em->flush();
-
-        return new Response("Progress saved", 200);
-    }
-
-    /**
-     * récupérer la progression de l'utilisateur
-     * @Route("/user/{userId}/movie/{movieId}/progress", name="user_movie_progress", methods={"GET"})
-     */
-    public function getUserMovieProgress(int $userId, int $movieId, UserMovieProgressRepository $progressRepository): JsonResponse
-    {
-        // Trouver la progression de l'utilisateur pour le film donné
+        // Trouver la progression de l'utilisateur pour ce film
         $progress = $progressRepository->findOneBy(['user' => $userId, 'movie' => $movieId]);
 
+        // Si aucune progression n'existe, on crée un nouvel enregistrement
+        if (!$progress) {
+            $progress = new UserMovieProgress();
+            $progress->setUser($em->getRepository(User::class)->find($userId)); // Récupère l'utilisateur
+            $progress->setMovie($em->getRepository(Movie::class)->find($movieId)); // Récupère le film
+        }
+
+        // Mettre à jour la progression
+        $progress->setProgress($newProgress);
+
+        // Sauvegarder la progression
+        $em->persist($progress);
+        $em->flush();
+
+        // Transformer en tableau associatif avec le service
+        $data = $movieProgressTransformer->transform($progress);
+
+        return new JsonResponse($data);
+    }
+
+
+    /**
+     * Récupérer la progression de l'utilisateur
+     * @Route("/user/{userId}/movie/{movieId}/progress", name="user_movie_progress", methods={"GET"})
+     */
+    public function getUserMovieProgress(
+        int $userId,
+        int $movieId,
+        UserMovieProgressRepository $progressRepository,
+        MovieProgressTransformer $movieProgressTransformer // Injection du service
+    ): JsonResponse {
+        // Trouver la progression de l'utilisateur pour le film donné
+        $progress = $progressRepository->findOneBy(['user' => $userId, 'movie' => $movieId]);
+    
         // Si aucune progression n'existe, on renvoie une progression de 0 (le début du film)
         if (!$progress) {
             return new JsonResponse([
@@ -90,15 +85,11 @@ class UserMovieProgressController extends AbstractController
                 'progress' => 0, // Commencer au début
             ]);
         }
-
-        // Transformer en tableau associatif
-        $response = [
-            'user' => $progress->getUser()->getId(),
-            'movie' => $progress->getMovie()->getId(),
-            'progress' => $progress->getProgress(), // La position du film
-        ];
-
-        return new JsonResponse($response);
+    
+        // Transformer en tableau associatif avec le service
+        $data = $movieProgressTransformer->transform($progress);
+    
+        return new JsonResponse($data);
     }
 
 }
