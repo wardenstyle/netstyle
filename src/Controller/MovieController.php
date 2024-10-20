@@ -22,7 +22,7 @@ class MovieController extends AbstractController
     }
 
     /**
-     * @Route("/movies", name="movie_list", methods={"GET"})
+     * récupèrer les filmes
      */
     public function getMovies(EntityManagerInterface $entityManager): JsonResponse
     {
@@ -44,7 +44,7 @@ class MovieController extends AbstractController
     }
 
     /**
-     * @Route("/movies/{id}", name="movie_show", methods={"GET"})
+     * récupérer 1 filme
      */
     public function getMovie(int $id, EntityManagerInterface $entityManager): JsonResponse
     {
@@ -58,7 +58,7 @@ class MovieController extends AbstractController
     }
 
     /**
-     * @Route("/movies", name="movie_create", methods={"POST"})
+     * Créer un filme
      */
     public function create(Request $request, EntityManagerInterface $entityManager, ValidatorInterface $validator)
     {
